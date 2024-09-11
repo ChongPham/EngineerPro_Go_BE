@@ -2,14 +2,14 @@ package main
 
 import (
 	"log"
-	"myapp/handlers"
+	"myprj/MyFirstApp/controller"
 	"net/http"
 )
 
 func main() {
-	http.HandleFunc("/register", handlers.RegisterHandler)
-	http.HandleFunc("/login", handlers.LoginHandler)
-	http.HandleFunc("/profile", handlers.ProfileHandler)
+	http.HandleFunc("/register", controller.Register)
+	http.HandleFunc("/login", controller.Login)
+	http.HandleFunc("/profile", controller.Profile)
 
 	log.Println("Server is running on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

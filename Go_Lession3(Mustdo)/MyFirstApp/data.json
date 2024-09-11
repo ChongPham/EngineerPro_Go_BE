@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "username": "Tiger Nixon",
+    "password": "320800",
+    "profile": ""
+  },
+  {
+    "id": 2,
+    "username": "Garrett Winters",
+    "password": "170750",
+    "profile": ""
+  },
+  {
+    "id": 3,
+    "username": "Ashton Cox",
+    "password": "860000",
+    "profile": ""
+  },
+  {
+    "id": 0,
+    "username": "trong",
+    "password": "$2a$10$WheidanIjpmIyM75gt4Va.y4GPF.Qc4uft8nRGQHDm4LCZP8uwSty",
+    "profile": ""
+  }
+]
