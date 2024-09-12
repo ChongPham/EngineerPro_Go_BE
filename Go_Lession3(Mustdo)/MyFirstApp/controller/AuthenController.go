@@ -2,10 +2,13 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"myprj/MyFirstApp/config"
 	"myprj/MyFirstApp/models"
 	"myprj/MyFirstApp/utils"
 	"net/http"
+	"os"
 )
 
 func Register(w http.ResponseWriter, r *http.Request) {
@@ -85,12 +88,92 @@ func Profile(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(user)
 	} else if r.Method == http.MethodPut {
 		var updatedUser models.User
-		json.NewDecoder(r.Body).Decode(&updatedUser)
+		err := json.NewDecoder(r.Body).Decode(&updatedUser)
+		if err != nil {
+			http.Error(w, "Invalid input", http.StatusBadRequest)
+			return
+		}
 
-		user.Profile = updatedUser.Profile
+		if updatedUser.Password != "" {
+			// Lưu ý: Nên hash mật khẩu trước khi lưu
+			hashedPassword, err := utils.HashPassword(updatedUser.Password)
+			if err != nil {
+				http.Error(w, "Error hashing password", http.StatusInternalServerError)
+				return
+			}
+			user.Password = hashedPassword
+		}
+
+		if updatedUser.Profile != "" {
+			user.Profile = updatedUser.Profile
+		}
+
+		// Cập nhật thông tin user trong file JSON
+		err = config.UpdateUser(user)
+		if err != nil {
+			fmt.Println("Error updating user:", err)
+			http.Error(w, "Error updating user", http.StatusInternalServerError)
+			return
+		}
+
 		config.UpdateUser(user)
 		http.Error(w, "Profile updated successfully", http.StatusOK)
 	} else {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 	}
+
+}
+
+func UpdateProfileWithImage(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("Authorization")
+	user, err := utils.ValidateJWT(token)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != http.MethodPut {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// multipart get image file
+	r.ParseMultipartForm(10 << 20) // Limit size file 10MB
+
+	file, handler, err := r.FormFile("profile_image")
+	if err != nil {
+		http.Error(w, "Error retrieving the file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// Create file
+	filePath := "./uploads/" + handler.Filename
+	dst, err := os.Create(filePath)
+	if err != nil {
+		http.Error(w, "Error saving the file", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	// Save file
+	_, err = io.Copy(dst, file)
+	if err != nil {
+		http.Error(w, "Error saving the file", http.StatusInternalServerError)
+		return
+	}
+
+	// save path to profile image user
+	user.ProfileImage = filePath
+
+	// save user's data to json file
+	err = config.UpdateUser(user)
+	if err != nil {
+		http.Error(w, "Error updating user", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Profile updated successfully", "image_url": filePath})
 }
